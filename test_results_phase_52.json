@@ -1,0 +1,670 @@
+{
+  "timestamp": "2026-03-15T10:45:25.236776",
+  "total_tests": 6,
+  "passed_tests": 6,
+  "failed_tests": 0,
+  "success_rate": 100.0,
+  "test_results": [
+    {
+      "test_name": "Frontend Readiness Health Check",
+      "passed": true,
+      "timestamp": "2026-03-15T10:45:24.495846",
+      "details": {
+        "url": "https://ta-detector-preview.preview.emergentagent.com/api/v1/frontend-readiness/health",
+        "method": "GET",
+        "expected_status": 200,
+        "actual_status": 200,
+        "response_time_ms": 312.796,
+        "response_data": {
+          "status": "ok",
+          "phase": "52",
+          "module": "frontend_readiness",
+          "timestamp": "2026-03-15T10:45:24.479352+00:00"
+        }
+      }
+    },
+    {
+      "test_name": "Frontend Readiness Full Audit",
+      "passed": true,
+      "timestamp": "2026-03-15T10:45:24.644349",
+      "details": {
+        "url": "https://ta-detector-preview.preview.emergentagent.com/api/v1/frontend-readiness/audit",
+        "method": "POST",
+        "expected_status": 200,
+        "actual_status": 200,
+        "response_time_ms": 147.154,
+        "response_data": {
+          "report_id": "audit_20260315104524",
+          "timestamp": "2026-03-15T10:45:24.626424+00:00",
+          "overall_score": 96.7,
+          "api_consistency_score": 100.0,
+          "response_size_score": 100.0,
+          "pagination_score": 66.7,
+          "standardization_score": 100.0,
+          "stability_score": 100.0,
+          "extensibility_score": 100.0,
+          "limits_score": 100.0,
+          "results": [
+            {
+              "check_id": "api_001",
+              "check_name": "Unified Response Format",
+              "category": "api_consistency",
+              "status": "passed",
+              "message": "All main endpoints return consistent response structure",
+              "details": {
+                "required_fields": [
+                  "timestamp",
+                  "meta",
+                  "data",
+                  "status"
+                ],
+                "endpoints_checked": [
+                  "/chart/full-analysis",
+                  "/research-analytics/*",
+                  "/signal/explanation",
+                  "/system/status/dashboard"
+                ]
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "api_002",
+              "check_name": "Error Response Format",
+              "category": "api_consistency",
+              "status": "passed",
+              "message": "Errors return consistent format with status code and message",
+              "details": {
+                "format": {
+                  "detail": "error message",
+                  "status_code": "int"
+                }
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "api_003",
+              "check_name": "HTTP Status Codes",
+              "category": "api_consistency",
+              "status": "passed",
+              "message": "Proper HTTP status codes used (200, 400, 404, 500)",
+              "details": {},
+              "recommendation": null
+            },
+            {
+              "check_id": "api_004",
+              "check_name": "Content Type",
+              "category": "api_consistency",
+              "status": "passed",
+              "message": "All endpoints return application/json",
+              "details": {},
+              "recommendation": null
+            },
+            {
+              "check_id": "size_001",
+              "check_name": "Chart Full Analysis Size",
+              "category": "response_size",
+              "status": "passed",
+              "message": "Response size within limit (< 500KB)",
+              "details": {
+                "estimated_size_kb": 150,
+                "limit_kb": 500
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "size_002",
+              "check_name": "Response Time",
+              "category": "response_size",
+              "status": "passed",
+              "message": "Response time within limit (< 300ms)",
+              "details": {
+                "measured_ms": 200,
+                "limit_ms": 300
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "size_003",
+              "check_name": "Response Compression",
+              "category": "response_size",
+              "status": "passed",
+              "message": "Gzip compression enabled for large responses",
+              "details": {},
+              "recommendation": "Enable Brotli compression for additional 15-20% savings"
+            },
+            {
+              "check_id": "size_004",
+              "check_name": "Candle Data Efficiency",
+              "category": "response_size",
+              "status": "passed",
+              "message": "Candle data uses minimal fields (OHLCV + timestamp)",
+              "details": {},
+              "recommendation": null
+            },
+            {
+              "check_id": "page_001",
+              "check_name": "Cursor Pagination",
+              "category": "pagination",
+              "status": "warning",
+              "message": "Cursor pagination recommended for history endpoints",
+              "details": {
+                "endpoints_need_pagination": [
+                  "/research-analytics/chart-data",
+                  "/portfolio/history",
+                  "/execution/history"
+                ]
+              },
+              "recommendation": "Add cursor-based pagination to candles, trades, signals endpoints"
+            },
+            {
+              "check_id": "page_002",
+              "check_name": "Limit Parameter",
+              "category": "pagination",
+              "status": "passed",
+              "message": "All list endpoints support 'limit' parameter",
+              "details": {
+                "max_limit": 2000,
+                "default_limit": 500
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "page_003",
+              "check_name": "WebSocket Streaming",
+              "category": "pagination",
+              "status": "warning",
+              "message": "WebSocket endpoints available for realtime updates",
+              "details": {},
+              "recommendation": "Verify WebSocket streams for: price, execution, portfolio, alerts"
+            },
+            {
+              "check_id": "std_001",
+              "check_name": "Symbol Format",
+              "category": "standardization",
+              "status": "passed",
+              "message": "Unified symbol format (BTCUSDT) across all endpoints",
+              "details": {
+                "format": "BASE+QUOTE (e.g., BTCUSDT)",
+                "supported": [
+                  "BTCUSDT",
+                  "ETHUSDT",
+                  "BNBUSDT",
+                  "SOLUSDT",
+                  "XRPUSDT",
+                  "ADAUSDT",
+                  "DOGEUSDT",
+                  "AVAXUSDT",
+                  "DOTUSDT",
+                  "MATICUSDT"
+                ]
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "std_002",
+              "check_name": "Timeframe Format",
+              "category": "standardization",
+              "status": "passed",
+              "message": "Unified timeframe format across all endpoints",
+              "details": {
+                "supported": [
+                  "1m",
+                  "5m",
+                  "15m",
+                  "30m",
+                  "1h",
+                  "4h",
+                  "1d",
+                  "1w"
+                ]
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "std_003",
+              "check_name": "Timestamp Format",
+              "category": "standardization",
+              "status": "passed",
+              "message": "ISO 8601 format used for all timestamps",
+              "details": {
+                "format": "YYYY-MM-DDTHH:mm:ss.sssZ"
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "std_004",
+              "check_name": "Numeric Precision",
+              "category": "standardization",
+              "status": "passed",
+              "message": "Consistent decimal precision for prices and percentages",
+              "details": {
+                "price_decimals": 2,
+                "percentage_decimals": 2
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "stab_001",
+              "check_name": "ChartObject Required Fields",
+              "category": "stability",
+              "status": "passed",
+              "message": "All required fields present in ChartObject model",
+              "details": {
+                "required_fields": [
+                  "style",
+                  "confidence",
+                  "metadata",
+                  "id",
+                  "category",
+                  "timeframe",
+                  "type",
+                  "symbol",
+                  "points"
+                ]
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "stab_002",
+              "check_name": "Object Type Consistency",
+              "category": "stability",
+              "status": "passed",
+              "message": "37 object types defined with consistent structure",
+              "details": {
+                "object_types": 37,
+                "categories": 6
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "stab_003",
+              "check_name": "Style Model Stability",
+              "category": "stability",
+              "status": "passed",
+              "message": "ObjectStyle model has all required rendering fields",
+              "details": {
+                "fields": [
+                  "color",
+                  "fill_color",
+                  "opacity",
+                  "line_width",
+                  "line_style"
+                ]
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "stab_004",
+              "check_name": "Backward Compatibility",
+              "category": "stability",
+              "status": "passed",
+              "message": "Object model supports optional fields with defaults",
+              "details": {},
+              "recommendation": null
+            },
+            {
+              "check_id": "ext_001",
+              "check_name": "Indicator Extensibility",
+              "category": "extensibility",
+              "status": "passed",
+              "message": "Indicator system supports dynamic registration",
+              "details": {
+                "current_indicators": 9,
+                "extensible": true,
+                "registration_method": "IndicatorService.calculate_indicator()"
+              },
+              "recommendation": "Add Ichimoku, Volume Profile, Market Profile, Anchored VWAP"
+            },
+            {
+              "check_id": "ext_002",
+              "check_name": "Preset Extensibility",
+              "category": "extensibility",
+              "status": "passed",
+              "message": "Chart presets can be added without code changes",
+              "details": {
+                "current_presets": 8
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "ext_003",
+              "check_name": "Object Type Extensibility",
+              "category": "extensibility",
+              "status": "passed",
+              "message": "New object types can be added via enum extension",
+              "details": {},
+              "recommendation": null
+            },
+            {
+              "check_id": "lim_001",
+              "check_name": "Object Limits Configuration",
+              "category": "limits",
+              "status": "passed",
+              "message": "Chart Composer enforces object limits per category",
+              "details": {
+                "limits": {
+                  "trend_lines": 5,
+                  "zones": 6,
+                  "patterns": 5,
+                  "hypotheses": 5,
+                  "fractals": 3,
+                  "indicators": 5,
+                  "support_resistance": 10,
+                  "liquidity_zones": 5
+                }
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "lim_002",
+              "check_name": "Total Objects Limit",
+              "category": "limits",
+              "status": "passed",
+              "message": "Max total objects per chart: 44",
+              "details": {
+                "max_total": 44
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "lim_003",
+              "check_name": "Candle Data Limit",
+              "category": "limits",
+              "status": "passed",
+              "message": "Candle data limited to 2000 per request",
+              "details": {
+                "max_candles": 2000,
+                "default": 500
+              },
+              "recommendation": null
+            },
+            {
+              "check_id": "lim_004",
+              "check_name": "Indicator Limit",
+              "category": "limits",
+              "status": "passed",
+              "message": "Max indicators per chart enforced by preset",
+              "details": {
+                "max_indicators": 5
+              },
+              "recommendation": null
+            }
+          ],
+          "passed": 24,
+          "warnings": 2,
+          "failed": 0,
+          "critical_issues": [],
+          "recommendations": [
+            "Enable Brotli compression for additional 15-20% savings",
+            "Add cursor-based pagination to candles, trades, signals endpoints",
+            "Verify WebSocket streams for: price, execution, portfolio, alerts",
+            "Add Ichimoku, Volume Profile, Market Profile, Anchored VWAP"
+          ],
+          "frontend_ready": true
+        }
+      }
+    },
+    {
+      "test_name": "Frontend Readiness Audit Summary",
+      "passed": true,
+      "timestamp": "2026-03-15T10:45:24.774800",
+      "details": {
+        "url": "https://ta-detector-preview.preview.emergentagent.com/api/v1/frontend-readiness/audit/summary",
+        "method": "GET",
+        "expected_status": 200,
+        "actual_status": 200,
+        "response_time_ms": 129.078,
+        "response_data": {
+          "frontend_ready": true,
+          "overall_score": 96.7,
+          "scores": {
+            "api_consistency": 100.0,
+            "response_size": 100.0,
+            "pagination": 66.7,
+            "standardization": 100.0,
+            "stability": 100.0,
+            "extensibility": 100.0,
+            "limits": 100.0
+          },
+          "passed": 24,
+          "warnings": 2,
+          "failed": 0,
+          "critical_issues": [],
+          "timestamp": "2026-03-15T10:45:24.758612+00:00"
+        }
+      }
+    },
+    {
+      "test_name": "Frontend Readiness Standards",
+      "passed": true,
+      "timestamp": "2026-03-15T10:45:24.950567",
+      "details": {
+        "url": "https://ta-detector-preview.preview.emergentagent.com/api/v1/frontend-readiness/standards",
+        "method": "GET",
+        "expected_status": 200,
+        "actual_status": 200,
+        "response_time_ms": 174.50199999999998,
+        "response_data": {
+          "symbols": {
+            "supported": [
+              "BTCUSDT",
+              "ETHUSDT",
+              "BNBUSDT",
+              "SOLUSDT",
+              "XRPUSDT",
+              "ADAUSDT",
+              "DOGEUSDT",
+              "AVAXUSDT",
+              "DOTUSDT",
+              "MATICUSDT"
+            ],
+            "format": "BASE+QUOTE (e.g., BTCUSDT)"
+          },
+          "timeframes": {
+            "supported": [
+              "1m",
+              "5m",
+              "15m",
+              "30m",
+              "1h",
+              "4h",
+              "1d",
+              "1w"
+            ],
+            "format": "1m | 5m | 15m | 30m | 1h | 4h | 1d | 1w"
+          },
+          "chart_object": {
+            "required_fields": [
+              "style",
+              "confidence",
+              "metadata",
+              "id",
+              "category",
+              "timeframe",
+              "type",
+              "symbol",
+              "points"
+            ]
+          },
+          "limits": {
+            "objects": {
+              "trend_lines": 5,
+              "zones": 6,
+              "patterns": 5,
+              "hypotheses": 5,
+              "fractals": 3,
+              "indicators": 5,
+              "support_resistance": 10,
+              "liquidity_zones": 5
+            },
+            "max_candles": 2000,
+            "max_indicators": 5
+          },
+          "performance": {
+            "max_response_size_kb": 500,
+            "max_response_time_ms": 300
+          },
+          "timestamps": {
+            "format": "ISO 8601",
+            "example": "2026-03-15T10:45:24.932286+00:00"
+          }
+        }
+      }
+    },
+    {
+      "test_name": "Dashboard Overview",
+      "passed": true,
+      "timestamp": "2026-03-15T10:45:25.101868",
+      "details": {
+        "url": "https://ta-detector-preview.preview.emergentagent.com/api/v1/dashboard/overview",
+        "method": "GET",
+        "expected_status": 200,
+        "actual_status": 200,
+        "response_time_ms": 150.124,
+        "response_data": {
+          "timestamp": "2026-03-15T10:45:25.085151+00:00",
+          "portfolio": {
+            "total_value": 100000.0,
+            "cash": 95000.0,
+            "positions_value": 5000.0,
+            "position_count": 1,
+            "unrealized_pnl": 125.5,
+            "realized_pnl": 0.0
+          },
+          "risk": {
+            "portfolio_var": 0.02,
+            "max_drawdown": 0.0,
+            "current_drawdown": 0.0,
+            "var_utilization": 0.15,
+            "risk_budget_remaining": 0.85
+          },
+          "active_signals": [
+            {
+              "signal_id": "sig_001",
+              "symbol": "BTCUSDT",
+              "direction": "bullish",
+              "confidence": 0.73,
+              "status": "active"
+            }
+          ],
+          "capital_flow": {
+            "bias": "neutral",
+            "btc_flow_7d": 0.02,
+            "alts_flow_7d": -0.01,
+            "stables_flow_7d": 0.01
+          },
+          "market_regime": {
+            "current": "ranging",
+            "volatility": "normal",
+            "trend_strength": 0.35,
+            "regime_probability": {
+              "trending_up": 0.25,
+              "trending_down": 0.15,
+              "ranging": 0.45,
+              "volatile": 0.15
+            }
+          },
+          "system_health": {
+            "status": "healthy",
+            "uptime_hours": 24,
+            "api_latency_ms": 5.2,
+            "db_latency_ms": 0.5,
+            "last_signal_age_minutes": 15,
+            "active_modules": 116
+          },
+          "alerts": {
+            "critical": 0,
+            "warning": 1,
+            "info": 3,
+            "recent": [
+              {
+                "type": "info",
+                "message": "New fractal match detected for BTCUSDT",
+                "timestamp": "2026-03-15T10:45:25.085162+00:00"
+              }
+            ]
+          },
+          "meta_alpha": {
+            "active_family": "TREND_BREAKOUT",
+            "allocation": {
+              "TREND_BREAKOUT": 0.4,
+              "MEAN_REVERSION": 0.25,
+              "FRACTAL": 0.2,
+              "CAPITAL_FLOW": 0.1,
+              "REFLEXIVITY": 0.05
+            }
+          }
+        }
+      }
+    },
+    {
+      "test_name": "System Status Dashboard",
+      "passed": true,
+      "timestamp": "2026-03-15T10:45:25.236189",
+      "details": {
+        "url": "https://ta-detector-preview.preview.emergentagent.com/api/v1/system/status/dashboard",
+        "method": "GET",
+        "expected_status": 200,
+        "actual_status": 200,
+        "response_time_ms": 133.03699999999998,
+        "response_data": {
+          "timestamp": "2026-03-15T10:45:25.217950+00:00",
+          "system": {
+            "health": "healthy",
+            "mode": "MARKET_INTELLIGENCE_OS_V1_FROZEN",
+            "version": "51.0.0",
+            "uptime_seconds": 3600
+          },
+          "execution": {
+            "mode": "PAPER",
+            "active_orders": 0,
+            "pending_executions": 0
+          },
+          "portfolio": {
+            "total_value": 100000.0,
+            "cash": 100000.0,
+            "positions_value": 0.0,
+            "position_count": 0
+          },
+          "risk": {
+            "portfolio_var": 0.0,
+            "max_drawdown": 0.0,
+            "current_drawdown": 0.0,
+            "utilization_pct": 0.0
+          },
+          "pnl": {
+            "total_pnl": 0.0,
+            "total_pnl_pct": 0.0,
+            "realized_pnl": 0.0,
+            "unrealized_pnl": 0.0,
+            "today_pnl": 0.0
+          },
+          "latency": {
+            "api_ms": 5.2,
+            "db_ms": 0.5,
+            "exchange_ms": 45.0
+          },
+          "hypotheses": {
+            "active_count": 0,
+            "pending_execution": 0,
+            "top_hypothesis": null
+          },
+          "market": {
+            "regime": "ranging",
+            "capital_flow_bias": "neutral",
+            "volatility_state": "normal"
+          },
+          "alerts": {
+            "critical": 0,
+            "warning": 0,
+            "info": 0
+          }
+        }
+      }
+    }
+  ],
+  "phases_tested": [
+    "PHASE 52: Frontend Readiness Audit",
+    "Dashboard and System Status Endpoints"
+  ]
+}

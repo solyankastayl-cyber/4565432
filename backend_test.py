@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
 """
-Backend Testing for PHASES 49-51: Visual Objects, Chart Composer, Signal Explanation
-===================================================================================
+Backend Testing for PHASE 52: Frontend Readiness Audit
+======================================================
 
 Tests:
-- PHASE 49: Visual Objects Engine
-- PHASE 50: Chart Composition Engine  
-- PHASE 51: Signal Explanation Engine
-- System Dashboard Status
+- PHASE 52: Frontend Readiness Audit Module
+- Dashboard and System Status endpoints
 
 Target Endpoints:
-- GET /api/v1/visual-objects/health
-- GET /api/v1/visual-objects/types
-- GET /api/v1/chart/health
-- GET /api/v1/chart/presets
-- GET /api/v1/chart/full-analysis/BTCUSDT/1h
-- GET /api/v1/signal/health
-- GET /api/v1/signal/explanation/BTCUSDT/1h
-- GET /api/v1/signal/drivers/BTCUSDT/1h
-- GET /api/v1/system/status/dashboard
+- GET /api/v1/frontend-readiness/health - PHASE 52 module health
+- POST /api/v1/frontend-readiness/audit - run full audit (should return frontend_ready: true)
+- GET /api/v1/frontend-readiness/audit/summary - quick summary
+- GET /api/v1/frontend-readiness/standards - frontend standards documentation
+- GET /api/v1/dashboard/overview - aggregated dashboard for terminal
+- GET /api/v1/system/status/dashboard - system status for top-bar
 """
 
 import requests
@@ -29,7 +24,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 
 
-class Phase49_51_APITester:
+class Phase52_FrontendReadinessAPITester:
     def __init__(self, base_url: str = "https://ta-detector-preview.preview.emergentagent.com"):
         self.base_url = base_url.rstrip('/')
         self.tests_run = 0
@@ -40,7 +35,7 @@ class Phase49_51_APITester:
         self.timeout = 30  # seconds
         self.headers = {
             'Content-Type': 'application/json',
-            'User-Agent': 'TA-Engine-Backend-Tester/1.0'
+            'User-Agent': 'TA-Engine-Frontend-Readiness-Tester/1.0'
         }
 
     def log_result(self, test_name: str, passed: bool, details: Dict[str, Any]):
@@ -126,17 +121,17 @@ class Phase49_51_APITester:
             self.log_result(name, False, details)
             return False, details
 
-    def test_phase_49_visual_objects(self):
-        """Test PHASE 49: Visual Objects Engine"""
+    def test_phase_52_frontend_readiness(self):
+        """Test PHASE 52: Frontend Readiness Audit"""
         print("\n" + "="*60)
-        print("TESTING PHASE 49: VISUAL OBJECTS ENGINE")
+        print("TESTING PHASE 52: FRONTEND READINESS AUDIT")
         print("="*60)
 
         # Test health endpoint
         success, data = self.run_test(
-            "Visual Objects Health Check",
+            "Frontend Readiness Health Check",
             "GET",
-            "/api/v1/visual-objects/health"
+            "/api/v1/frontend-readiness/health"
         )
 
         if success:
@@ -145,144 +140,128 @@ class Phase49_51_APITester:
             missing = [f for f in required_fields if f not in data]
             if missing:
                 print(f"   ⚠️  Missing fields in health response: {missing}")
-
-        # Test object types endpoint
-        success, data = self.run_test(
-            "Visual Objects Types",
-            "GET",
-            "/api/v1/visual-objects/types"
-        )
-
-        if success:
-            # Validate object types structure
-            expected_fields = ["types", "categories", "count"]
-            missing = [f for f in expected_fields if f not in data]
-            if missing:
-                print(f"   ⚠️  Missing fields in types response: {missing}")
             else:
-                print(f"   📊 Found {data.get('count', 0)} object types")
-                print(f"   📊 Categories: {', '.join(data.get('categories', []))}")
+                print(f"   📊 Phase: {data.get('phase', 'N/A')}")
+                print(f"   📊 Module: {data.get('module', 'N/A')}")
 
-    def test_phase_50_chart_composer(self):
-        """Test PHASE 50: Chart Composition Engine"""
-        print("\n" + "="*60)
-        print("TESTING PHASE 50: CHART COMPOSITION ENGINE")
-        print("="*60)
-
-        # Test health endpoint
-        success, data = self.run_test(
-            "Chart Composer Health Check",
-            "GET",
-            "/api/v1/chart/health"
+        # Test full audit endpoint - this is the main test
+        print("\n🔍 Running full frontend readiness audit (may take a moment)...")
+        success, audit_data = self.run_test(
+            "Frontend Readiness Full Audit",
+            "POST",
+            "/api/v1/frontend-readiness/audit"
         )
 
         if success:
-            required_fields = ["status", "phase", "module"]
-            missing = [f for f in required_fields if f not in data]
+            # Validate audit response structure
+            required_audit_fields = [
+                "report_id", "timestamp", "overall_score", 
+                "frontend_ready", "passed", "warnings", "failed"
+            ]
+            missing = [f for f in required_audit_fields if f not in audit_data]
             if missing:
-                print(f"   ⚠️  Missing fields in health response: {missing}")
-
-        # Test presets endpoint
-        success, data = self.run_test(
-            "Chart Composer Presets",
-            "GET",
-            "/api/v1/chart/presets"
-        )
-
-        if success:
-            if "presets" in data and data["presets"]:
-                print(f"   📊 Found {len(data['presets'])} chart presets")
-                for preset in data["presets"][:3]:  # Show first 3
-                    print(f"   📋 Preset: {preset.get('name', 'Unknown')} ({preset.get('preset_id', 'Unknown')})")
-
-        # Test main chart analysis endpoint
-        print("\n🔍 Testing main chart analysis endpoint (may take longer)...")
-        success, data = self.run_test(
-            "Chart Full Analysis BTCUSDT/1h",
-            "GET",
-            "/api/v1/chart/full-analysis/BTCUSDT/1h"
-        )
-
-        if success:
-            # Validate main chart response
-            expected_fields = ["symbol", "timeframe", "market_regime", "candles", "objects"]
-            missing = [f for f in expected_fields if f not in data]
-            if missing:
-                print(f"   ⚠️  Missing fields in chart analysis: {missing}")
+                print(f"   ⚠️  Missing fields in audit response: {missing}")
             else:
-                print(f"   📊 Symbol: {data.get('symbol', 'N/A')}")
-                print(f"   📊 Timeframe: {data.get('timeframe', 'N/A')}")
-                print(f"   📊 Market Regime: {data.get('market_regime', 'N/A')}")
-                print(f"   📊 Candles: {len(data.get('candles', []))}")
-                print(f"   📊 Objects: {len(data.get('objects', []))}")
+                overall_score = audit_data.get('overall_score', 0)
+                frontend_ready = audit_data.get('frontend_ready', False)
                 
-                # Check statistics
-                stats = data.get('stats', {})
-                if stats:
-                    print(f"   📈 Stats: {stats}")
+                print(f"   📊 Report ID: {audit_data.get('report_id', 'N/A')}")
+                print(f"   📊 Overall Score: {overall_score}/100")
+                print(f"   📊 Frontend Ready: {frontend_ready}")
+                print(f"   📊 Tests Passed: {audit_data.get('passed', 0)}")
+                print(f"   📊 Warnings: {audit_data.get('warnings', 0)}")
+                print(f"   📊 Failed: {audit_data.get('failed', 0)}")
+                
+                # Check if meets requirements (score >= 85 and frontend_ready = true)
+                if frontend_ready and overall_score >= 85:
+                    print("   ✅ FRONTEND READINESS REQUIREMENTS MET!")
+                else:
+                    print("   ❌ FRONTEND READINESS REQUIREMENTS NOT MET")
+                    print(f"      Required: frontend_ready=True AND score>=85")
+                    print(f"      Actual: frontend_ready={frontend_ready} AND score={overall_score}")
+                
+                # Show category scores
+                score_fields = [
+                    "api_consistency_score", "response_size_score", "pagination_score",
+                    "standardization_score", "stability_score", "extensibility_score", "limits_score"
+                ]
+                
+                print("   📈 Category Scores:")
+                for field in score_fields:
+                    if field in audit_data:
+                        category = field.replace('_score', '').replace('_', ' ').title()
+                        print(f"      {category}: {audit_data[field]}/100")
+                
+                # Show critical issues if any
+                critical_issues = audit_data.get('critical_issues', [])
+                if critical_issues:
+                    print("   🚨 Critical Issues:")
+                    for issue in critical_issues:
+                        print(f"      - {issue}")
+                
+                # Show recommendations
+                recommendations = audit_data.get('recommendations', [])
+                if recommendations:
+                    print("   💡 Recommendations:")
+                    for rec in recommendations[:3]:  # Show first 3
+                        print(f"      - {rec}")
 
-    def test_phase_51_signal_explanation(self):
-        """Test PHASE 51: Signal Explanation Engine"""
-        print("\n" + "="*60)
-        print("TESTING PHASE 51: SIGNAL EXPLANATION ENGINE")
-        print("="*60)
-
-        # Test health endpoint
-        success, data = self.run_test(
-            "Signal Explanation Health Check",
+        # Test audit summary endpoint
+        success, summary_data = self.run_test(
+            "Frontend Readiness Audit Summary",
             "GET",
-            "/api/v1/signal/health"
-        )
-
-        # Test signal explanation endpoint
-        print("\n🔍 Testing signal explanation (may take longer)...")
-        success, data = self.run_test(
-            "Signal Explanation BTCUSDT/1h",
-            "GET",
-            "/api/v1/signal/explanation/BTCUSDT/1h"
+            "/api/v1/frontend-readiness/audit/summary"
         )
 
         if success:
-            # Validate explanation response
-            expected_fields = ["signal_id", "direction", "confidence", "drivers", "summary"]
-            missing = [f for f in expected_fields if f not in data]
+            expected_fields = ["frontend_ready", "overall_score", "scores", "passed", "warnings", "failed"]
+            missing = [f for f in expected_fields if f not in summary_data]
             if missing:
-                print(f"   ⚠️  Missing fields in explanation: {missing}")
+                print(f"   ⚠️  Missing fields in summary response: {missing}")
+
+        # Test standards endpoint
+        success, standards_data = self.run_test(
+            "Frontend Readiness Standards",
+            "GET",
+            "/api/v1/frontend-readiness/standards"
+        )
+
+        if success:
+            # Validate standards response
+            expected_sections = ["symbols", "timeframes", "chart_object", "limits", "performance"]
+            missing = [f for f in expected_sections if f not in standards_data]
+            if missing:
+                print(f"   ⚠️  Missing sections in standards: {missing}")
             else:
-                print(f"   🎯 Signal Direction: {data.get('direction', 'N/A')}")
-                print(f"   🎯 Confidence: {data.get('confidence', 0):.1%}")
-                print(f"   🎯 Strength: {data.get('strength', 'N/A')}")
-                print(f"   🎯 Drivers: {len(data.get('drivers', []))}")
-                print(f"   📝 Summary: {data.get('summary', 'N/A')[:100]}...")
+                symbols = standards_data.get('symbols', {}).get('supported', [])
+                timeframes = standards_data.get('timeframes', {}).get('supported', [])
+                limits = standards_data.get('limits', {})
+                
+                print(f"   📊 Supported Symbols: {len(symbols)} symbols")
+                print(f"   📊 Supported Timeframes: {len(timeframes)} timeframes")
+                print(f"   📊 Object Limits: {len(limits.get('objects', {}))}")
+                print(f"   📊 Max Response Size: {standards_data.get('performance', {}).get('max_response_size_kb', 'N/A')}KB")
 
-                # Show top drivers
-                drivers = data.get('drivers', [])
-                if drivers:
-                    print("   🔧 Top Drivers:")
-                    for driver in drivers[:3]:
-                        print(f"     - {driver.get('name', 'Unknown')}: {driver.get('contribution', 0):.3f}")
+    def test_dashboard_endpoints(self):
+        """Test Dashboard and System Status endpoints"""
+        print("\n" + "="*60)
+        print("TESTING DASHBOARD & SYSTEM STATUS")
+        print("="*60)
 
-        # Test simplified drivers endpoint
+        # Test dashboard overview endpoint
         success, data = self.run_test(
-            "Signal Drivers BTCUSDT/1h",
+            "Dashboard Overview",
             "GET",
-            "/api/v1/signal/drivers/BTCUSDT/1h"
+            "/api/v1/dashboard/overview"
         )
 
         if success:
-            expected_fields = ["direction", "confidence", "drivers", "summary"]
-            missing = [f for f in expected_fields if f not in data]
-            if missing:
-                print(f"   ⚠️  Missing fields in drivers response: {missing}")
+            # This endpoint might not exist, so just log what we get
+            print(f"   📊 Dashboard Overview Response Keys: {list(data.keys())}")
 
-    def test_system_dashboard_status(self):
-        """Test System Dashboard Status"""
-        print("\n" + "="*60)
-        print("TESTING SYSTEM DASHBOARD STATUS")
-        print("="*60)
-
+        # Test system status dashboard
         success, data = self.run_test(
-            "System Dashboard Status",
+            "System Status Dashboard",
             "GET",
             "/api/v1/system/status/dashboard"
         )
@@ -307,15 +286,13 @@ class Phase49_51_APITester:
         """Run all test suites"""
         start_time = time.time()
         
-        print("🚀 Starting PHASES 49-51 Backend API Testing")
+        print("🚀 Starting PHASE 52 Frontend Readiness Backend API Testing")
         print(f"Target: {self.base_url}")
         print(f"Timestamp: {datetime.now().isoformat()}")
         
         # Run all test phases
-        self.test_phase_49_visual_objects()
-        self.test_phase_50_chart_composer()
-        self.test_phase_51_signal_explanation()
-        self.test_system_dashboard_status()
+        self.test_phase_52_frontend_readiness()
+        self.test_dashboard_endpoints()
         
         # Final summary
         elapsed = time.time() - start_time
@@ -349,17 +326,15 @@ class Phase49_51_APITester:
             "success_rate": (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0,
             "test_results": self.test_results,
             "phases_tested": [
-                "PHASE 49: Visual Objects Engine",
-                "PHASE 50: Chart Composition Engine", 
-                "PHASE 51: Signal Explanation Engine",
-                "System Dashboard Status"
+                "PHASE 52: Frontend Readiness Audit",
+                "Dashboard and System Status Endpoints"
             ]
         }
 
 
 def main():
     """Main test runner"""
-    tester = Phase49_51_APITester()
+    tester = Phase52_FrontendReadinessAPITester()
     
     try:
         success = tester.run_all_tests()
@@ -367,10 +342,10 @@ def main():
         # Save test results
         summary = tester.get_test_summary()
         
-        with open("/app/test_results_phases_49_51.json", "w") as f:
+        with open("/app/test_results_phase_52.json", "w") as f:
             json.dump(summary, f, indent=2)
         
-        print(f"\n💾 Test results saved to: /app/test_results_phases_49_51.json")
+        print(f"\n💾 Test results saved to: /app/test_results_phase_52.json")
         
         return 0 if success else 1
         
