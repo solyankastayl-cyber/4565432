@@ -1,377 +1,386 @@
 #!/usr/bin/env python3
 """
-Backend Testing for PHASE 47-48: Research Analytics API Layer
-=============================================================
+Backend Testing for PHASES 49-51: Visual Objects, Chart Composer, Signal Explanation
+===================================================================================
 
-Tests the unified backend analytics layer for chart visualization:
-- PHASE 47: Modularity & Isolation Audit (providers, contracts, services)
-- PHASE 48: Research Analytics API Layer
+Tests:
+- PHASE 49: Visual Objects Engine
+- PHASE 50: Chart Composition Engine  
+- PHASE 51: Signal Explanation Engine
+- System Dashboard Status
 
-Endpoints to test:
-1. GET /api/health - system health
-2. GET /api/v1/research-analytics/health - PHASE 48 module health
-3. GET /api/v1/research-analytics/chart-data/BTCUSDT/1h - chart data with mock candles
-4. GET /api/v1/research-analytics/full-payload/BTCUSDT/1h - complete chart payload
-5. GET /api/v1/research-analytics/suggestions/BTCUSDT/1h - regime detection and suggestions
-6. GET /api/v1/research-analytics/fractal-matches/BTCUSDT/1h - fractal pattern matching
-7. GET /api/v1/research-analytics/patterns/BTCUSDT/1h - pattern detection
-8. GET /api/v1/research-analytics/hypothesis/BTCUSDT/1h - hypothesis visualization
-9. GET /api/v1/research-analytics/presets - research presets list
+Target Endpoints:
+- GET /api/v1/visual-objects/health
+- GET /api/v1/visual-objects/types
+- GET /api/v1/chart/health
+- GET /api/v1/chart/presets
+- GET /api/v1/chart/full-analysis/BTCUSDT/1h
+- GET /api/v1/signal/health
+- GET /api/v1/signal/explanation/BTCUSDT/1h
+- GET /api/v1/signal/drivers/BTCUSDT/1h
+- GET /api/v1/system/status/dashboard
 """
 
 import requests
-import json
 import sys
-from datetime import datetime, timezone
-from typing import Dict, List, Any, Optional
+import time
+import json
+from datetime import datetime
+from typing import Dict, List, Optional, Any
 
-class ResearchAnalyticsAPITester:
+
+class Phase49_51_APITester:
     def __init__(self, base_url: str = "https://ta-detector-preview.preview.emergentagent.com"):
-        self.base_url = base_url
+        self.base_url = base_url.rstrip('/')
         self.tests_run = 0
         self.tests_passed = 0
-        self.results = []
+        self.test_results = []
         
-        print("=" * 80)
-        print("PHASE 47-48 Research Analytics API Testing")
-        print("=" * 80)
-        print(f"Base URL: {self.base_url}")
-        print(f"Testing Time: {datetime.now(timezone.utc).isoformat()}")
-        print()
-
-    def log_test(self, name: str, passed: bool, details: str = "", data: Dict = None):
-        """Log test result"""
-        self.tests_run += 1
-        if passed:
-            self.tests_passed += 1
-            status = "✅ PASS"
-        else:
-            status = "❌ FAIL"
-        
-        result = {
-            "test_name": name,
-            "passed": passed,
-            "details": details,
-            "data": data,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+        # Test configuration
+        self.timeout = 30  # seconds
+        self.headers = {
+            'Content-Type': 'application/json',
+            'User-Agent': 'TA-Engine-Backend-Tester/1.0'
         }
-        self.results.append(result)
-        
-        print(f"{status} | {name}")
-        if details:
-            print(f"      {details}")
-        if data and not passed:
-            print(f"      Error: {data.get('error', 'Unknown error')}")
-        print()
 
-    def test_endpoint(self, method: str, endpoint: str, expected_status: int = 200,
-                     validate_data: callable = None, test_name: str = None) -> Dict[str, Any]:
-        """Test a single endpoint"""
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
-        test_name = test_name or f"{method} {endpoint}"
+    def log_result(self, test_name: str, passed: bool, details: Dict[str, Any]):
+        """Log test result"""
+        result = {
+            "test_name": test_name,
+            "passed": passed,
+            "timestamp": datetime.now().isoformat(),
+            "details": details
+        }
+        self.test_results.append(result)
+        
+        if passed:
+            print(f"✅ {test_name}")
+        else:
+            print(f"❌ {test_name}")
+            print(f"   Details: {details}")
+
+    def run_test(self, name: str, method: str, endpoint: str, expected_status: int = 200) -> tuple[bool, Dict[str, Any]]:
+        """Run a single API test"""
+        url = f"{self.base_url}{endpoint}"
+        self.tests_run += 1
+        
+        print(f"\n🔍 Testing {name}...")
+        print(f"   URL: {url}")
         
         try:
-            if method.upper() == "GET":
-                response = requests.get(url, timeout=30)
-            elif method.upper() == "POST":
-                response = requests.post(url, timeout=30)
+            if method == 'GET':
+                response = requests.get(url, headers=self.headers, timeout=self.timeout)
+            elif method == 'POST':
+                response = requests.post(url, headers=self.headers, timeout=self.timeout)
             else:
-                self.log_test(test_name, False, f"Unsupported method: {method}")
-                return {"success": False}
-            
+                raise ValueError(f"Unsupported method: {method}")
+
             # Check status code
-            if response.status_code != expected_status:
-                self.log_test(
-                    test_name, False,
-                    f"Expected {expected_status}, got {response.status_code}",
-                    {"error": f"HTTP {response.status_code}", "response": response.text[:200]}
-                )
-                return {"success": False}
+            status_ok = response.status_code == expected_status
             
-            # Parse JSON
+            # Try to parse JSON
             try:
-                data = response.json()
-            except json.JSONDecodeError:
-                self.log_test(test_name, False, "Invalid JSON response")
-                return {"success": False}
-            
-            # Custom validation
-            if validate_data and not validate_data(data):
-                self.log_test(test_name, False, "Data validation failed", data)
-                return {"success": False}
-            
-            self.log_test(test_name, True, f"Status: {response.status_code}", data)
-            return {"success": True, "data": data}
-            
-        except requests.RequestException as e:
-            self.log_test(test_name, False, f"Request failed: {str(e)}")
-            return {"success": False}
+                json_data = response.json()
+            except ValueError:
+                json_data = {"error": "Invalid JSON response", "text": response.text[:500]}
 
-    def validate_health_response(self, data: Dict) -> bool:
-        """Validate health endpoint response"""
-        required_fields = ["ok", "version", "phase", "timestamp"]
-        return all(field in data for field in required_fields) and data.get("ok") is True
+            details = {
+                "url": url,
+                "method": method,
+                "expected_status": expected_status,
+                "actual_status": response.status_code,
+                "response_time_ms": response.elapsed.total_seconds() * 1000,
+                "response_data": json_data
+            }
 
-    def validate_research_health(self, data: Dict) -> bool:
-        """Validate research analytics health response"""
-        return (
-            data.get("status") == "ok" and
-            data.get("phase") == "48" and
-            data.get("module") == "research_analytics" and
-            "components" in data and
-            isinstance(data["components"], dict)
+            if status_ok:
+                self.tests_passed += 1
+                self.log_result(name, True, details)
+                return True, json_data
+            else:
+                self.log_result(name, False, details)
+                return False, json_data
+
+        except requests.exceptions.Timeout:
+            details = {
+                "url": url,
+                "error": "Request timeout",
+                "timeout_seconds": self.timeout
+            }
+            self.log_result(name, False, details)
+            return False, details
+
+        except requests.exceptions.ConnectionError:
+            details = {
+                "url": url,
+                "error": "Connection error - service may be down"
+            }
+            self.log_result(name, False, details)
+            return False, details
+
+        except Exception as e:
+            details = {
+                "url": url,
+                "error": str(e)
+            }
+            self.log_result(name, False, details)
+            return False, details
+
+    def test_phase_49_visual_objects(self):
+        """Test PHASE 49: Visual Objects Engine"""
+        print("\n" + "="*60)
+        print("TESTING PHASE 49: VISUAL OBJECTS ENGINE")
+        print("="*60)
+
+        # Test health endpoint
+        success, data = self.run_test(
+            "Visual Objects Health Check",
+            "GET",
+            "/api/v1/visual-objects/health"
         )
 
-    def validate_chart_data(self, data: Dict) -> bool:
-        """Validate chart data response"""
-        required_fields = ["symbol", "timeframe", "timestamp", "candles"]
-        if not all(field in data for field in required_fields):
-            return False
-        
-        # Check candles structure
-        if not isinstance(data["candles"], list) or len(data["candles"]) == 0:
-            return False
-        
-        # Validate first candle structure
-        candle = data["candles"][0]
-        candle_fields = ["timestamp", "open", "high", "low", "close", "volume"]
-        return all(field in candle for field in candle_fields)
+        if success:
+            # Validate response structure
+            required_fields = ["status", "phase", "module"]
+            missing = [f for f in required_fields if f not in data]
+            if missing:
+                print(f"   ⚠️  Missing fields in health response: {missing}")
 
-    def validate_full_payload(self, data: Dict) -> bool:
-        """Validate full chart payload response"""
-        required_fields = ["symbol", "timeframe", "timestamp", "candles"]
-        if not all(field in data for field in required_fields):
-            return False
-        
-        # Should have suggestions and regime
-        if "regime" not in data or "suggested_indicators" not in data:
-            return False
-        
-        return len(data["candles"]) > 0
+        # Test object types endpoint
+        success, data = self.run_test(
+            "Visual Objects Types",
+            "GET",
+            "/api/v1/visual-objects/types"
+        )
 
-    def validate_suggestions(self, data: Dict) -> bool:
-        """Validate suggestions response"""
-        required_fields = ["regime", "confidence", "suggested_indicators", "suggested_overlays"]
-        return all(field in data for field in required_fields)
+        if success:
+            # Validate object types structure
+            expected_fields = ["types", "categories", "count"]
+            missing = [f for f in expected_fields if f not in data]
+            if missing:
+                print(f"   ⚠️  Missing fields in types response: {missing}")
+            else:
+                print(f"   📊 Found {data.get('count', 0)} object types")
+                print(f"   📊 Categories: {', '.join(data.get('categories', []))}")
 
-    def validate_fractal_matches(self, data: Dict) -> bool:
-        """Validate fractal matches response"""
-        required_fields = ["symbol", "timeframe", "scan_timestamp", "matches"]
-        return all(field in data for field in required_fields) and isinstance(data["matches"], list)
+    def test_phase_50_chart_composer(self):
+        """Test PHASE 50: Chart Composition Engine"""
+        print("\n" + "="*60)
+        print("TESTING PHASE 50: CHART COMPOSITION ENGINE")
+        print("="*60)
 
-    def validate_patterns(self, data: Dict) -> bool:
-        """Validate patterns response"""
-        required_fields = ["symbol", "timeframe", "patterns", "count"]
-        return all(field in data for field in required_fields) and isinstance(data["patterns"], list)
+        # Test health endpoint
+        success, data = self.run_test(
+            "Chart Composer Health Check",
+            "GET",
+            "/api/v1/chart/health"
+        )
 
-    def validate_hypothesis(self, data: Dict) -> bool:
-        """Validate hypothesis visualization response"""
-        required_fields = ["hypothesis_id", "symbol", "timeframe", "direction", "confidence"]
-        return all(field in data for field in required_fields)
+        if success:
+            required_fields = ["status", "phase", "module"]
+            missing = [f for f in required_fields if f not in data]
+            if missing:
+                print(f"   ⚠️  Missing fields in health response: {missing}")
 
-    def validate_presets(self, data: Dict) -> bool:
-        """Validate presets response"""
-        required_fields = ["presets", "count"]
-        return all(field in data for field in required_fields) and isinstance(data["presets"], list)
+        # Test presets endpoint
+        success, data = self.run_test(
+            "Chart Composer Presets",
+            "GET",
+            "/api/v1/chart/presets"
+        )
+
+        if success:
+            if "presets" in data and data["presets"]:
+                print(f"   📊 Found {len(data['presets'])} chart presets")
+                for preset in data["presets"][:3]:  # Show first 3
+                    print(f"   📋 Preset: {preset.get('name', 'Unknown')} ({preset.get('preset_id', 'Unknown')})")
+
+        # Test main chart analysis endpoint
+        print("\n🔍 Testing main chart analysis endpoint (may take longer)...")
+        success, data = self.run_test(
+            "Chart Full Analysis BTCUSDT/1h",
+            "GET",
+            "/api/v1/chart/full-analysis/BTCUSDT/1h"
+        )
+
+        if success:
+            # Validate main chart response
+            expected_fields = ["symbol", "timeframe", "market_regime", "candles", "objects"]
+            missing = [f for f in expected_fields if f not in data]
+            if missing:
+                print(f"   ⚠️  Missing fields in chart analysis: {missing}")
+            else:
+                print(f"   📊 Symbol: {data.get('symbol', 'N/A')}")
+                print(f"   📊 Timeframe: {data.get('timeframe', 'N/A')}")
+                print(f"   📊 Market Regime: {data.get('market_regime', 'N/A')}")
+                print(f"   📊 Candles: {len(data.get('candles', []))}")
+                print(f"   📊 Objects: {len(data.get('objects', []))}")
+                
+                # Check statistics
+                stats = data.get('stats', {})
+                if stats:
+                    print(f"   📈 Stats: {stats}")
+
+    def test_phase_51_signal_explanation(self):
+        """Test PHASE 51: Signal Explanation Engine"""
+        print("\n" + "="*60)
+        print("TESTING PHASE 51: SIGNAL EXPLANATION ENGINE")
+        print("="*60)
+
+        # Test health endpoint
+        success, data = self.run_test(
+            "Signal Explanation Health Check",
+            "GET",
+            "/api/v1/signal/health"
+        )
+
+        # Test signal explanation endpoint
+        print("\n🔍 Testing signal explanation (may take longer)...")
+        success, data = self.run_test(
+            "Signal Explanation BTCUSDT/1h",
+            "GET",
+            "/api/v1/signal/explanation/BTCUSDT/1h"
+        )
+
+        if success:
+            # Validate explanation response
+            expected_fields = ["signal_id", "direction", "confidence", "drivers", "summary"]
+            missing = [f for f in expected_fields if f not in data]
+            if missing:
+                print(f"   ⚠️  Missing fields in explanation: {missing}")
+            else:
+                print(f"   🎯 Signal Direction: {data.get('direction', 'N/A')}")
+                print(f"   🎯 Confidence: {data.get('confidence', 0):.1%}")
+                print(f"   🎯 Strength: {data.get('strength', 'N/A')}")
+                print(f"   🎯 Drivers: {len(data.get('drivers', []))}")
+                print(f"   📝 Summary: {data.get('summary', 'N/A')[:100]}...")
+
+                # Show top drivers
+                drivers = data.get('drivers', [])
+                if drivers:
+                    print("   🔧 Top Drivers:")
+                    for driver in drivers[:3]:
+                        print(f"     - {driver.get('name', 'Unknown')}: {driver.get('contribution', 0):.3f}")
+
+        # Test simplified drivers endpoint
+        success, data = self.run_test(
+            "Signal Drivers BTCUSDT/1h",
+            "GET",
+            "/api/v1/signal/drivers/BTCUSDT/1h"
+        )
+
+        if success:
+            expected_fields = ["direction", "confidence", "drivers", "summary"]
+            missing = [f for f in expected_fields if f not in data]
+            if missing:
+                print(f"   ⚠️  Missing fields in drivers response: {missing}")
+
+    def test_system_dashboard_status(self):
+        """Test System Dashboard Status"""
+        print("\n" + "="*60)
+        print("TESTING SYSTEM DASHBOARD STATUS")
+        print("="*60)
+
+        success, data = self.run_test(
+            "System Dashboard Status",
+            "GET",
+            "/api/v1/system/status/dashboard"
+        )
+
+        if success:
+            # Validate dashboard response
+            expected_sections = ["system", "execution", "portfolio", "risk", "pnl", "market"]
+            missing = [f for f in expected_sections if f not in data]
+            if missing:
+                print(f"   ⚠️  Missing sections in dashboard: {missing}")
+            else:
+                system = data.get('system', {})
+                print(f"   💻 System Health: {system.get('health', 'N/A')}")
+                print(f"   💻 System Mode: {system.get('mode', 'N/A')}")
+                print(f"   💻 Version: {system.get('version', 'N/A')}")
+                
+                market = data.get('market', {})
+                print(f"   📈 Market Regime: {market.get('regime', 'N/A')}")
+                print(f"   💰 Capital Flow: {market.get('capital_flow_bias', 'N/A')}")
 
     def run_all_tests(self):
-        """Run all tests"""
-        print("Starting comprehensive API testing...")
-        print()
+        """Run all test suites"""
+        start_time = time.time()
         
-        # Test 1: System Health
-        self.test_endpoint(
-            "GET", "/api/health",
-            validate_data=self.validate_health_response,
-            test_name="System Health Check"
-        )
+        print("🚀 Starting PHASES 49-51 Backend API Testing")
+        print(f"Target: {self.base_url}")
+        print(f"Timestamp: {datetime.now().isoformat()}")
         
-        # Test 2: Research Analytics Module Health
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/health",
-            validate_data=self.validate_research_health,
-            test_name="Research Analytics Health Check"
-        )
+        # Run all test phases
+        self.test_phase_49_visual_objects()
+        self.test_phase_50_chart_composer()
+        self.test_phase_51_signal_explanation()
+        self.test_system_dashboard_status()
         
-        # Test 3: Chart Data API
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/chart-data/BTCUSDT/1h",
-            validate_data=self.validate_chart_data,
-            test_name="Chart Data API (BTCUSDT/1h)"
-        )
-        
-        # Test 4: Full Payload API
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/full-payload/BTCUSDT/1h",
-            validate_data=self.validate_full_payload,
-            test_name="Full Chart Payload API"
-        )
-        
-        # Test 5: Suggestions API
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/suggestions/BTCUSDT/1h",
-            validate_data=self.validate_suggestions,
-            test_name="Chart Suggestions API"
-        )
-        
-        # Test 6: Fractal Matches API
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/fractal-matches/BTCUSDT/1h",
-            validate_data=self.validate_fractal_matches,
-            test_name="Fractal Pattern Matching API"
-        )
-        
-        # Test 7: Patterns API
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/patterns/BTCUSDT/1h",
-            validate_data=self.validate_patterns,
-            test_name="Pattern Detection API"
-        )
-        
-        # Test 8: Hypothesis Visualization API
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/hypothesis/BTCUSDT/1h",
-            validate_data=self.validate_hypothesis,
-            test_name="Hypothesis Visualization API"
-        )
-        
-        # Test 9: Research Presets API
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/presets",
-            validate_data=self.validate_presets,
-            test_name="Research Presets API"
-        )
-        
-        # Additional Tests: Test different symbols and timeframes
-        print("Testing additional symbols and timeframes...")
-        print()
-        
-        # Test with different symbols
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/chart-data/ETHUSDT/4h",
-            validate_data=self.validate_chart_data,
-            test_name="Chart Data API (ETHUSDT/4h)"
-        )
-        
-        # Test with different timeframes
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/suggestions/BTCUSDT/15m",
-            validate_data=self.validate_suggestions,
-            test_name="Suggestions API (BTCUSDT/15m)"
-        )
-        
-        # Test specific indicator endpoints
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/available-indicators",
-            test_name="Available Indicators API"
-        )
-        
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/available-overlays",
-            test_name="Available Overlays API"
-        )
-
-    def test_advanced_features(self):
-        """Test advanced features and edge cases"""
-        print("Testing advanced features and edge cases...")
-        print()
-        
-        # Test Support/Resistance Detection
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/support-resistance/BTCUSDT/1h",
-            test_name="Support/Resistance Detection"
-        )
-        
-        # Test Liquidity Zones
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/liquidity-zones/BTCUSDT/1h",
-            test_name="Liquidity Zones Detection"
-        )
-        
-        # Test with different parameters
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/chart-data/BTCUSDT/1h?limit=100",
-            validate_data=self.validate_chart_data,
-            test_name="Chart Data with Custom Limit"
-        )
-        
-        # Test fractal matches with different parameters
-        self.test_endpoint(
-            "GET", "/api/v1/research-analytics/fractal-matches/BTCUSDT/1h?min_similarity=0.8&limit=5",
-            validate_data=self.validate_fractal_matches,
-            test_name="Fractal Matches with Parameters"
-        )
-
-    def generate_report(self) -> Dict[str, Any]:
-        """Generate test report"""
+        # Final summary
+        elapsed = time.time() - start_time
         success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
         
-        report = {
-            "test_summary": {
-                "total_tests": self.tests_run,
-                "passed_tests": self.tests_passed,
-                "failed_tests": self.tests_run - self.tests_passed,
-                "success_rate": f"{success_rate:.1f}%"
-            },
-            "test_results": self.results,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "test_environment": {
-                "base_url": self.base_url,
-                "phase": "47-48",
-                "module": "research_analytics"
-            }
+        print("\n" + "="*60)
+        print("FINAL TEST SUMMARY")
+        print("="*60)
+        print(f"📊 Tests Run: {self.tests_run}")
+        print(f"✅ Tests Passed: {self.tests_passed}")
+        print(f"❌ Tests Failed: {self.tests_run - self.tests_passed}")
+        print(f"📈 Success Rate: {success_rate:.1f}%")
+        print(f"⏱️  Total Time: {elapsed:.2f} seconds")
+        
+        # Critical issues
+        critical_failures = [r for r in self.test_results if not r["passed"] and "health" in r["test_name"].lower()]
+        if critical_failures:
+            print(f"\n🚨 CRITICAL: {len(critical_failures)} health check failures!")
+            for failure in critical_failures:
+                print(f"   - {failure['test_name']}")
+        
+        return self.tests_passed == self.tests_run
+
+    def get_test_summary(self):
+        """Get detailed test summary"""
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "total_tests": self.tests_run,
+            "passed_tests": self.tests_passed,
+            "failed_tests": self.tests_run - self.tests_passed,
+            "success_rate": (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0,
+            "test_results": self.test_results,
+            "phases_tested": [
+                "PHASE 49: Visual Objects Engine",
+                "PHASE 50: Chart Composition Engine", 
+                "PHASE 51: Signal Explanation Engine",
+                "System Dashboard Status"
+            ]
         }
-        
-        # Save to file
-        with open("/app/backend_test_results.json", "w") as f:
-            json.dump(report, f, indent=2)
-        
-        return report
-
-    def print_summary(self):
-        """Print test summary"""
-        print("=" * 80)
-        print("TEST SUMMARY")
-        print("=" * 80)
-        print(f"Total Tests: {self.tests_run}")
-        print(f"Passed: {self.tests_passed}")
-        print(f"Failed: {self.tests_run - self.tests_passed}")
-        
-        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
-        print(f"Success Rate: {success_rate:.1f}%")
-        print()
-        
-        # List failed tests
-        failed_tests = [r for r in self.results if not r["passed"]]
-        if failed_tests:
-            print("FAILED TESTS:")
-            for test in failed_tests:
-                print(f"❌ {test['test_name']}: {test['details']}")
-        else:
-            print("✅ All tests passed!")
-        
-        print()
-        print("=" * 80)
 
 
 def main():
-    """Main test execution"""
-    tester = ResearchAnalyticsAPITester()
+    """Main test runner"""
+    tester = Phase49_51_APITester()
     
-    # Run all tests
-    tester.run_all_tests()
-    tester.test_advanced_features()
-    
-    # Generate and save report
-    report = tester.generate_report()
-    
-    # Print summary
-    tester.print_summary()
-    
-    # Return appropriate exit code
-    return 0 if tester.tests_passed == tester.tests_run else 1
+    try:
+        success = tester.run_all_tests()
+        
+        # Save test results
+        summary = tester.get_test_summary()
+        
+        with open("/app/test_results_phases_49_51.json", "w") as f:
+            json.dump(summary, f, indent=2)
+        
+        print(f"\n💾 Test results saved to: /app/test_results_phases_49_51.json")
+        
+        return 0 if success else 1
+        
+    except KeyboardInterrupt:
+        print("\n🛑 Tests interrupted by user")
+        return 1
+    except Exception as e:
+        print(f"\n💥 Test suite crashed: {e}")
+        return 1
 
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    sys.exit(main())
