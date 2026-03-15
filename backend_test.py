@@ -1,403 +1,377 @@
 #!/usr/bin/env python3
 """
-TA Engine Module Runtime Backend Testing
-========================================
+Backend Testing for PHASE 47-48: Research Analytics API Layer
+=============================================================
 
-Tests for PHASE 46.1 Logic Validation and PHASE 46.4 Stability Freeze
-Backend testing for 6 specified API endpoints.
+Tests the unified backend analytics layer for chart visualization:
+- PHASE 47: Modularity & Isolation Audit (providers, contracts, services)
+- PHASE 48: Research Analytics API Layer
 
-Expected Results:
-- GET /api/health: ok: true, version 45.0.0
-- GET /api/system/db-health: MongoDB connection healthy
-- GET /api/ta/registry: 88 nodes registered
-- POST /api/v1/validation/run/logic: PHASE 46.1 Logic Validation (12 tests)
-- POST /api/v1/validation/run: Full validation score
-- GET /api/v1/validation/health: validation module status
+Endpoints to test:
+1. GET /api/health - system health
+2. GET /api/v1/research-analytics/health - PHASE 48 module health
+3. GET /api/v1/research-analytics/chart-data/BTCUSDT/1h - chart data with mock candles
+4. GET /api/v1/research-analytics/full-payload/BTCUSDT/1h - complete chart payload
+5. GET /api/v1/research-analytics/suggestions/BTCUSDT/1h - regime detection and suggestions
+6. GET /api/v1/research-analytics/fractal-matches/BTCUSDT/1h - fractal pattern matching
+7. GET /api/v1/research-analytics/patterns/BTCUSDT/1h - pattern detection
+8. GET /api/v1/research-analytics/hypothesis/BTCUSDT/1h - hypothesis visualization
+9. GET /api/v1/research-analytics/presets - research presets list
 """
 
 import requests
-import sys
 import json
-import time
+import sys
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 
-class TAEngineBackendTester:
-    def __init__(self, base_url="https://portfolio-command-7.preview.emergentagent.com"):
-        self.base_url = base_url.rstrip('/')
+class ResearchAnalyticsAPITester:
+    def __init__(self, base_url: str = "https://ta-detector-preview.preview.emergentagent.com"):
+        self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
-        self.tests_failed = 0
-        self.test_results = []
-        self.session = requests.Session()
-        self.session.headers.update({'Content-Type': 'application/json'})
+        self.results = []
+        
+        print("=" * 80)
+        print("PHASE 47-48 Research Analytics API Testing")
+        print("=" * 80)
+        print(f"Base URL: {self.base_url}")
+        print(f"Testing Time: {datetime.now(timezone.utc).isoformat()}")
+        print()
 
-    def log_result(self, test_name: str, success: bool, message: str, details: Dict = None):
+    def log_test(self, name: str, passed: bool, details: str = "", data: Dict = None):
         """Log test result"""
         self.tests_run += 1
-        if success:
+        if passed:
             self.tests_passed += 1
-            print(f"✅ {test_name}: {message}")
+            status = "✅ PASS"
         else:
-            self.tests_failed += 1
-            print(f"❌ {test_name}: {message}")
+            status = "❌ FAIL"
         
-        self.test_results.append({
-            "test_name": test_name,
-            "success": success,
-            "message": message,
-            "details": details or {},
+        result = {
+            "test_name": name,
+            "passed": passed,
+            "details": details,
+            "data": data,
             "timestamp": datetime.now(timezone.utc).isoformat()
-        })
+        }
+        self.results.append(result)
+        
+        print(f"{status} | {name}")
+        if details:
+            print(f"      {details}")
+        if data and not passed:
+            print(f"      Error: {data.get('error', 'Unknown error')}")
+        print()
 
-    def make_request(self, method: str, endpoint: str, **kwargs) -> tuple[bool, Any, str]:
-        """Make HTTP request and handle errors"""
+    def test_endpoint(self, method: str, endpoint: str, expected_status: int = 200,
+                     validate_data: callable = None, test_name: str = None) -> Dict[str, Any]:
+        """Test a single endpoint"""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        test_name = test_name or f"{method} {endpoint}"
         
         try:
-            if method.upper() == 'GET':
-                response = self.session.get(url, timeout=30, **kwargs)
-            elif method.upper() == 'POST':
-                response = self.session.post(url, timeout=60, **kwargs)  # Longer timeout for validation
+            if method.upper() == "GET":
+                response = requests.get(url, timeout=30)
+            elif method.upper() == "POST":
+                response = requests.post(url, timeout=30)
             else:
-                return False, None, f"Unsupported method: {method}"
-
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    return True, data, f"Status: {response.status_code}"
-                except json.JSONDecodeError:
-                    return True, response.text, f"Status: {response.status_code} (text response)"
-            else:
-                try:
-                    error_data = response.json()
-                    return False, error_data, f"Status: {response.status_code}, Error: {error_data}"
-                except:
-                    return False, response.text, f"Status: {response.status_code}, Text: {response.text[:200]}"
-
-        except requests.exceptions.Timeout:
-            return False, None, "Request timeout"
-        except requests.exceptions.ConnectionError:
-            return False, None, "Connection error"
-        except Exception as e:
-            return False, None, f"Request error: {str(e)}"
-
-    def test_health_endpoint(self):
-        """Test GET /api/health - должен вернуть ok: true, version 45.0.0"""
-        success, data, message = self.make_request('GET', '/api/health')
-        
-        if success and isinstance(data, dict):
-            ok_check = data.get('ok') is True
-            version_check = data.get('version') == '45.0.0'
+                self.log_test(test_name, False, f"Unsupported method: {method}")
+                return {"success": False}
             
-            if ok_check and version_check:
-                self.log_result(
-                    "Health Endpoint", 
-                    True, 
-                    f"✅ ok: {data.get('ok')}, version: {data.get('version')}",
-                    {"response": data}
+            # Check status code
+            if response.status_code != expected_status:
+                self.log_test(
+                    test_name, False,
+                    f"Expected {expected_status}, got {response.status_code}",
+                    {"error": f"HTTP {response.status_code}", "response": response.text[:200]}
                 )
-            else:
-                self.log_result(
-                    "Health Endpoint", 
-                    False, 
-                    f"❌ ok: {data.get('ok')}, version: {data.get('version')} (expected: ok=True, version=45.0.0)",
-                    {"response": data}
-                )
-        else:
-            self.log_result("Health Endpoint", False, message, {"response": data})
+                return {"success": False}
+            
+            # Parse JSON
+            try:
+                data = response.json()
+            except json.JSONDecodeError:
+                self.log_test(test_name, False, "Invalid JSON response")
+                return {"success": False}
+            
+            # Custom validation
+            if validate_data and not validate_data(data):
+                self.log_test(test_name, False, "Data validation failed", data)
+                return {"success": False}
+            
+            self.log_test(test_name, True, f"Status: {response.status_code}", data)
+            return {"success": True, "data": data}
+            
+        except requests.RequestException as e:
+            self.log_test(test_name, False, f"Request failed: {str(e)}")
+            return {"success": False}
 
-    def test_db_health_endpoint(self):
-        """Test GET /api/system/db-health - MongoDB connection healthy"""
-        success, data, message = self.make_request('GET', '/api/system/db-health')
-        
-        if success and isinstance(data, dict):
-            status = data.get('status', '').lower()
-            connected = data.get('connected', False)
-            
-            if status in ['ok', 'healthy', 'connected'] and connected:
-                self.log_result(
-                    "DB Health", 
-                    True, 
-                    f"✅ MongoDB healthy - status: {status}, connected: {connected}",
-                    {"response": data}
-                )
-            else:
-                self.log_result(
-                    "DB Health", 
-                    False, 
-                    f"❌ MongoDB issues - status: {status}, connected: {connected}",
-                    {"response": data}
-                )
-        else:
-            self.log_result("DB Health", False, message, {"response": data})
+    def validate_health_response(self, data: Dict) -> bool:
+        """Validate health endpoint response"""
+        required_fields = ["ok", "version", "phase", "timestamp"]
+        return all(field in data for field in required_fields) and data.get("ok") is True
 
-    def test_ta_registry_endpoint(self):
-        """Test GET /api/ta/registry - 88 nodes registered"""
-        success, data, message = self.make_request('GET', '/api/ta/registry')
-        
-        if success and isinstance(data, dict):
-            registry_data = data.get('registry', {})
-            total_nodes = 0
-            
-            # Try different possible fields for node count
-            if isinstance(registry_data, dict):
-                total_nodes = (
-                    registry_data.get('total_nodes') or 
-                    registry_data.get('node_count') or 
-                    registry_data.get('total') or
-                    0
-                )
-            
-            # Check for nodes in different formats
-            if 'nodes' in data and isinstance(data['nodes'], list):
-                total_nodes = len(data['nodes'])
-            
-            if total_nodes >= 88:
-                self.log_result(
-                    "TA Registry", 
-                    True, 
-                    f"✅ {total_nodes} nodes registered (≥88 expected)",
-                    {"response": data, "node_count": total_nodes}
-                )
-            elif total_nodes > 0:
-                self.log_result(
-                    "TA Registry", 
-                    False, 
-                    f"❌ Only {total_nodes} nodes registered (88 expected)",
-                    {"response": data, "node_count": total_nodes}
-                )
-            else:
-                # Try to extract from status field or other fields
-                status = data.get('status', '')
-                if status == 'ok':
-                    self.log_result(
-                        "TA Registry", 
-                        True, 
-                        f"✅ Registry endpoint responsive, status: {status}",
-                        {"response": data}
-                    )
-                else:
-                    self.log_result(
-                        "TA Registry", 
-                        False, 
-                        f"❌ Could not determine node count from response",
-                        {"response": data}
-                    )
-        else:
-            self.log_result("TA Registry", False, message, {"response": data})
+    def validate_research_health(self, data: Dict) -> bool:
+        """Validate research analytics health response"""
+        return (
+            data.get("status") == "ok" and
+            data.get("phase") == "48" and
+            data.get("module") == "research_analytics" and
+            "components" in data and
+            isinstance(data["components"], dict)
+        )
 
-    def test_validation_health(self):
-        """Test GET /api/v1/validation/health - validation module status"""
-        success, data, message = self.make_request('GET', '/api/v1/validation/health')
+    def validate_chart_data(self, data: Dict) -> bool:
+        """Validate chart data response"""
+        required_fields = ["symbol", "timeframe", "timestamp", "candles"]
+        if not all(field in data for field in required_fields):
+            return False
         
-        if success and isinstance(data, dict):
-            status = data.get('status', '').lower()
-            phase = data.get('phase', '')
-            module = data.get('module', '')
-            
-            if status in ['ok', 'healthy', 'running'] and phase == '46':
-                self.log_result(
-                    "Validation Health", 
-                    True, 
-                    f"✅ Validation module healthy - status: {status}, phase: {phase}",
-                    {"response": data}
-                )
-            elif status in ['ok', 'healthy', 'running']:
-                self.log_result(
-                    "Validation Health", 
-                    True, 
-                    f"✅ Validation module healthy - status: {status}",
-                    {"response": data}
-                )
-            else:
-                self.log_result(
-                    "Validation Health", 
-                    False, 
-                    f"❌ Validation module issues - status: {status}",
-                    {"response": data}
-                )
-        else:
-            self.log_result("Validation Health", False, message, {"response": data})
+        # Check candles structure
+        if not isinstance(data["candles"], list) or len(data["candles"]) == 0:
+            return False
+        
+        # Validate first candle structure
+        candle = data["candles"][0]
+        candle_fields = ["timestamp", "open", "high", "low", "close", "volume"]
+        return all(field in candle for field in candle_fields)
 
-    def test_logic_validation(self):
-        """Test POST /api/v1/validation/run/logic - PHASE 46.1 Logic Validation (12 tests)"""
-        print("\n🔍 Running Logic Validation (this may take 30-60 seconds)...")
+    def validate_full_payload(self, data: Dict) -> bool:
+        """Validate full chart payload response"""
+        required_fields = ["symbol", "timeframe", "timestamp", "candles"]
+        if not all(field in data for field in required_fields):
+            return False
         
-        success, data, message = self.make_request('POST', '/api/v1/validation/run/logic')
+        # Should have suggestions and regime
+        if "regime" not in data or "suggested_indicators" not in data:
+            return False
         
-        if success and isinstance(data, dict):
-            audit = data.get('audit', '')
-            phase = data.get('phase', '')
-            score = data.get('score', 0)
-            tests_run = data.get('tests_run', 0)
-            tests_passed = data.get('tests_passed', 0)
-            tests_failed = data.get('tests_failed', 0)
-            
-            # Check if this is logic validation with expected structure
-            if audit == 'logic' and phase == '46.1':
-                if tests_run >= 12:
-                    if score >= 90:
-                        self.log_result(
-                            "Logic Validation", 
-                            True, 
-                            f"✅ PHASE 46.1 Logic Validation completed - Score: {score}%, Tests: {tests_passed}/{tests_run}",
-                            {"response": data, "score": score, "tests_run": tests_run}
-                        )
-                    else:
-                        self.log_result(
-                            "Logic Validation", 
-                            False, 
-                            f"❌ Logic Validation low score: {score}% (expected ≥90%), Tests: {tests_passed}/{tests_run}",
-                            {"response": data, "score": score, "tests_run": tests_run}
-                        )
-                else:
-                    self.log_result(
-                        "Logic Validation", 
-                        False, 
-                        f"❌ Insufficient tests run: {tests_run} (expected ≥12)",
-                        {"response": data, "tests_run": tests_run}
-                    )
-            else:
-                self.log_result(
-                    "Logic Validation", 
-                    False, 
-                    f"❌ Unexpected response format - audit: {audit}, phase: {phase}",
-                    {"response": data}
-                )
-        else:
-            self.log_result("Logic Validation", False, message, {"response": data})
+        return len(data["candles"]) > 0
 
-    def test_full_validation(self):
-        """Test POST /api/v1/validation/run - Full validation score"""
-        print("\n🔍 Running Full System Validation (this may take 60-120 seconds)...")
-        
-        success, data, message = self.make_request('POST', '/api/v1/validation/run')
-        
-        if success and isinstance(data, dict):
-            report_id = data.get('report_id', '')
-            system_score = data.get('system_score', 0)
-            status = data.get('status', '')
-            scores = data.get('scores', {})
-            summary = data.get('summary', {})
-            
-            if report_id and system_score >= 0:
-                if system_score >= 90:
-                    self.log_result(
-                        "Full Validation", 
-                        True, 
-                        f"✅ Full validation completed - System Score: {system_score}%, Status: {status}",
-                        {
-                            "response": data, 
-                            "system_score": system_score,
-                            "individual_scores": scores,
-                            "summary": summary
-                        }
-                    )
-                else:
-                    self.log_result(
-                        "Full Validation", 
-                        False, 
-                        f"❌ Low system score: {system_score}% (expected ≥90%), Status: {status}",
-                        {
-                            "response": data, 
-                            "system_score": system_score,
-                            "individual_scores": scores
-                        }
-                    )
-            else:
-                self.log_result(
-                    "Full Validation", 
-                    False, 
-                    f"❌ Invalid validation response - report_id: {report_id}, score: {system_score}",
-                    {"response": data}
-                )
-        else:
-            self.log_result("Full Validation", False, message, {"response": data})
+    def validate_suggestions(self, data: Dict) -> bool:
+        """Validate suggestions response"""
+        required_fields = ["regime", "confidence", "suggested_indicators", "suggested_overlays"]
+        return all(field in data for field in required_fields)
+
+    def validate_fractal_matches(self, data: Dict) -> bool:
+        """Validate fractal matches response"""
+        required_fields = ["symbol", "timeframe", "scan_timestamp", "matches"]
+        return all(field in data for field in required_fields) and isinstance(data["matches"], list)
+
+    def validate_patterns(self, data: Dict) -> bool:
+        """Validate patterns response"""
+        required_fields = ["symbol", "timeframe", "patterns", "count"]
+        return all(field in data for field in required_fields) and isinstance(data["patterns"], list)
+
+    def validate_hypothesis(self, data: Dict) -> bool:
+        """Validate hypothesis visualization response"""
+        required_fields = ["hypothesis_id", "symbol", "timeframe", "direction", "confidence"]
+        return all(field in data for field in required_fields)
+
+    def validate_presets(self, data: Dict) -> bool:
+        """Validate presets response"""
+        required_fields = ["presets", "count"]
+        return all(field in data for field in required_fields) and isinstance(data["presets"], list)
 
     def run_all_tests(self):
-        """Run all backend API tests"""
-        print("=" * 80)
-        print("TA ENGINE MODULE RUNTIME BACKEND TESTING")
-        print("PHASE 46.1 Logic Validation & PHASE 46.4 Stability Freeze")
-        print("=" * 80)
-        print(f"Backend URL: {self.base_url}")
-        print(f"Test started: {datetime.now(timezone.utc).isoformat()}")
+        """Run all tests"""
+        print("Starting comprehensive API testing...")
         print()
-
-        # Core system tests
-        print("🏥 CORE SYSTEM HEALTH TESTS")
-        print("-" * 40)
-        self.test_health_endpoint()
-        self.test_db_health_endpoint()
+        
+        # Test 1: System Health
+        self.test_endpoint(
+            "GET", "/api/health",
+            validate_data=self.validate_health_response,
+            test_name="System Health Check"
+        )
+        
+        # Test 2: Research Analytics Module Health
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/health",
+            validate_data=self.validate_research_health,
+            test_name="Research Analytics Health Check"
+        )
+        
+        # Test 3: Chart Data API
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/chart-data/BTCUSDT/1h",
+            validate_data=self.validate_chart_data,
+            test_name="Chart Data API (BTCUSDT/1h)"
+        )
+        
+        # Test 4: Full Payload API
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/full-payload/BTCUSDT/1h",
+            validate_data=self.validate_full_payload,
+            test_name="Full Chart Payload API"
+        )
+        
+        # Test 5: Suggestions API
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/suggestions/BTCUSDT/1h",
+            validate_data=self.validate_suggestions,
+            test_name="Chart Suggestions API"
+        )
+        
+        # Test 6: Fractal Matches API
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/fractal-matches/BTCUSDT/1h",
+            validate_data=self.validate_fractal_matches,
+            test_name="Fractal Pattern Matching API"
+        )
+        
+        # Test 7: Patterns API
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/patterns/BTCUSDT/1h",
+            validate_data=self.validate_patterns,
+            test_name="Pattern Detection API"
+        )
+        
+        # Test 8: Hypothesis Visualization API
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/hypothesis/BTCUSDT/1h",
+            validate_data=self.validate_hypothesis,
+            test_name="Hypothesis Visualization API"
+        )
+        
+        # Test 9: Research Presets API
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/presets",
+            validate_data=self.validate_presets,
+            test_name="Research Presets API"
+        )
+        
+        # Additional Tests: Test different symbols and timeframes
+        print("Testing additional symbols and timeframes...")
         print()
+        
+        # Test with different symbols
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/chart-data/ETHUSDT/4h",
+            validate_data=self.validate_chart_data,
+            test_name="Chart Data API (ETHUSDT/4h)"
+        )
+        
+        # Test with different timeframes
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/suggestions/BTCUSDT/15m",
+            validate_data=self.validate_suggestions,
+            test_name="Suggestions API (BTCUSDT/15m)"
+        )
+        
+        # Test specific indicator endpoints
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/available-indicators",
+            test_name="Available Indicators API"
+        )
+        
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/available-overlays",
+            test_name="Available Overlays API"
+        )
 
-        # TA Engine tests
-        print("🎯 TA ENGINE TESTS")
-        print("-" * 40)
-        self.test_ta_registry_endpoint()
+    def test_advanced_features(self):
+        """Test advanced features and edge cases"""
+        print("Testing advanced features and edge cases...")
         print()
+        
+        # Test Support/Resistance Detection
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/support-resistance/BTCUSDT/1h",
+            test_name="Support/Resistance Detection"
+        )
+        
+        # Test Liquidity Zones
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/liquidity-zones/BTCUSDT/1h",
+            test_name="Liquidity Zones Detection"
+        )
+        
+        # Test with different parameters
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/chart-data/BTCUSDT/1h?limit=100",
+            validate_data=self.validate_chart_data,
+            test_name="Chart Data with Custom Limit"
+        )
+        
+        # Test fractal matches with different parameters
+        self.test_endpoint(
+            "GET", "/api/v1/research-analytics/fractal-matches/BTCUSDT/1h?min_similarity=0.8&limit=5",
+            validate_data=self.validate_fractal_matches,
+            test_name="Fractal Matches with Parameters"
+        )
 
-        # Validation system tests
-        print("🔬 VALIDATION SYSTEM TESTS")
-        print("-" * 40)
-        self.test_validation_health()
-        self.test_logic_validation()
-        self.test_full_validation()
-        print()
+    def generate_report(self) -> Dict[str, Any]:
+        """Generate test report"""
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        
+        report = {
+            "test_summary": {
+                "total_tests": self.tests_run,
+                "passed_tests": self.tests_passed,
+                "failed_tests": self.tests_run - self.tests_passed,
+                "success_rate": f"{success_rate:.1f}%"
+            },
+            "test_results": self.results,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "test_environment": {
+                "base_url": self.base_url,
+                "phase": "47-48",
+                "module": "research_analytics"
+            }
+        }
+        
+        # Save to file
+        with open("/app/backend_test_results.json", "w") as f:
+            json.dump(report, f, indent=2)
+        
+        return report
 
-        # Results summary
+    def print_summary(self):
+        """Print test summary"""
         print("=" * 80)
         print("TEST SUMMARY")
         print("=" * 80)
-        print(f"Total tests run: {self.tests_run}")
-        print(f"Tests passed: {self.tests_passed}")
-        print(f"Tests failed: {self.tests_failed}")
-        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
-        print(f"Success rate: {success_rate:.1f}%")
-        print()
-
-        if self.tests_failed > 0:
-            print("❌ FAILED TESTS:")
-            for result in self.test_results:
-                if not result['success']:
-                    print(f"  • {result['test_name']}: {result['message']}")
-            print()
-
-        print(f"Test completed: {datetime.now(timezone.utc).isoformat()}")
+        print(f"Total Tests: {self.tests_run}")
+        print(f"Passed: {self.tests_passed}")
+        print(f"Failed: {self.tests_run - self.tests_passed}")
         
-        return self.tests_failed == 0
-
-    def get_detailed_results(self) -> Dict:
-        """Get detailed test results for reporting"""
-        return {
-            "summary": {
-                "tests_run": self.tests_run,
-                "tests_passed": self.tests_passed,
-                "tests_failed": self.tests_failed,
-                "success_rate": (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0,
-            },
-            "results": self.test_results,
-            "backend_url": self.base_url,
-            "test_timestamp": datetime.now(timezone.utc).isoformat(),
-        }
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        print(f"Success Rate: {success_rate:.1f}%")
+        print()
+        
+        # List failed tests
+        failed_tests = [r for r in self.results if not r["passed"]]
+        if failed_tests:
+            print("FAILED TESTS:")
+            for test in failed_tests:
+                print(f"❌ {test['test_name']}: {test['details']}")
+        else:
+            print("✅ All tests passed!")
+        
+        print()
+        print("=" * 80)
 
 
 def main():
     """Main test execution"""
-    tester = TAEngineBackendTester()
-    success = tester.run_all_tests()
+    tester = ResearchAnalyticsAPITester()
     
-    # Save detailed results
-    results = tester.get_detailed_results()
-    with open('/app/backend_test_results.json', 'w') as f:
-        json.dump(results, f, indent=2)
+    # Run all tests
+    tester.run_all_tests()
+    tester.test_advanced_features()
     
-    print(f"📄 Detailed results saved to: /app/backend_test_results.json")
+    # Generate and save report
+    report = tester.generate_report()
     
-    # Return exit code
-    return 0 if success else 1
+    # Print summary
+    tester.print_summary()
+    
+    # Return appropriate exit code
+    return 0 if tester.tests_passed == tester.tests_run else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    exit_code = main()
+    sys.exit(exit_code)

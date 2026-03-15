@@ -1077,3 +1077,12 @@ try:
     print("[Routes] PHASE 46 System Validation router registered")
 except ImportError as e:
     print(f"[Routes] System Validation router not available: {e}")
+
+
+# PHASE 48 — Research Analytics API
+try:
+    from modules.research_analytics import research_analytics_router
+    app.include_router(research_analytics_router, prefix="/api/v1")
+    print("[Routes] PHASE 48 Research Analytics router registered")
+except ImportError as e:
+    print(f"[Routes] Research Analytics router not available: {e}")
