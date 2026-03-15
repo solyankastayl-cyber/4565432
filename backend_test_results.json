@@ -1,0 +1,186 @@
+{
+  "summary": {
+    "tests_run": 6,
+    "tests_passed": 5,
+    "tests_failed": 1,
+    "success_rate": 83.33333333333334
+  },
+  "results": [
+    {
+      "test_name": "Health Endpoint",
+      "success": true,
+      "message": "\u2705 ok: True, version: 45.0.0",
+      "details": {
+        "response": {
+          "ok": true,
+          "mode": "MARKET_INTELLIGENCE_OS_V1_FROZEN",
+          "version": "45.0.0",
+          "phase": "PHASE 45 - Meta-Alpha Portfolio Engine (Production Ready)",
+          "timestamp": "2026-03-15T08:30:56.240130+00:00"
+        }
+      },
+      "timestamp": "2026-03-15T08:30:56.256142+00:00"
+    },
+    {
+      "test_name": "DB Health",
+      "success": true,
+      "message": "\u2705 MongoDB healthy - status: healthy, connected: True",
+      "details": {
+        "response": {
+          "status": "healthy",
+          "connected": true,
+          "latency_ms": 0.41,
+          "database": "test_database",
+          "collections_count": 11,
+          "timestamp": "2026-03-15T08:30:56.286667+00:00",
+          "collections": [
+            "exchange_intel_signals",
+            "exchange_intel_funding",
+            "capital_flow_rotations",
+            "exchange_intel_volume",
+            "alpha_nodes",
+            "capital_flow_scores",
+            "alpha_node_performance",
+            "capital_flow_snapshots",
+            "alpha_node_usage",
+            "events",
+            "alpha_node_relations"
+          ]
+        }
+      },
+      "timestamp": "2026-03-15T08:30:56.303211+00:00"
+    },
+    {
+      "test_name": "TA Registry",
+      "success": true,
+      "message": "\u2705 88 nodes registered (\u226588 expected)",
+      "details": {
+        "response": {
+          "status": "ok",
+          "phase": "13.1",
+          "registry": {
+            "connected": true,
+            "total_nodes": 88,
+            "nodes_by_type": {
+              "alpha": 15,
+              "structure": 6,
+              "liquidity": 9,
+              "microstructure": 7,
+              "context": 8,
+              "correlation": 5,
+              "portfolio": 4,
+              "feature": 22,
+              "factor": 12
+            },
+            "nodes_by_category": {
+              "trend": 10,
+              "volatility": 11,
+              "volume": 8,
+              "liquidity": 1,
+              "technical": 9,
+              "orderbook": 15,
+              "funding": 4,
+              "macro": 5,
+              "sentiment": 1,
+              "momentum": 7,
+              "portfolio": 4,
+              "price": 1,
+              "factor": 12
+            },
+            "active_nodes": 88
+          },
+          "timestamp": "2026-03-15T08:30:56.340232+00:00"
+        },
+        "node_count": 88
+      },
+      "timestamp": "2026-03-15T08:30:56.356531+00:00"
+    },
+    {
+      "test_name": "Validation Health",
+      "success": true,
+      "message": "\u2705 Validation module healthy - status: ok, phase: 46",
+      "details": {
+        "response": {
+          "status": "ok",
+          "phase": "46",
+          "module": "system_validation",
+          "summary": {
+            "last_validation": "2026-03-15T08:26:52.183543+00:00",
+            "last_score": 97.0,
+            "last_status": "STABLE",
+            "total_validations": 3,
+            "config": {
+              "stable_threshold": 90.0,
+              "warning_threshold": 70.0,
+              "critical_threshold": 50.0
+            }
+          },
+          "timestamp": "2026-03-15T08:30:56.386708+00:00"
+        }
+      },
+      "timestamp": "2026-03-15T08:30:56.408760+00:00"
+    },
+    {
+      "test_name": "Logic Validation",
+      "success": false,
+      "message": "Status: 404, Error: {'detail': 'Not Found'}",
+      "details": {
+        "response": {
+          "detail": "Not Found"
+        }
+      },
+      "timestamp": "2026-03-15T08:30:56.458955+00:00"
+    },
+    {
+      "test_name": "Full Validation",
+      "success": true,
+      "message": "\u2705 Full validation completed - System Score: 97.0%, Status: STABLE",
+      "details": {
+        "response": {
+          "report_id": "val_20260315083056",
+          "system_score": 97.0,
+          "status": "STABLE",
+          "duration_seconds": 0.0,
+          "scores": {
+            "coefficient": 100.0,
+            "integration": 100.0,
+            "logic": 85.0,
+            "stress": 100.0,
+            "chaos": 100.0
+          },
+          "summary": {
+            "tests_run": 15,
+            "tests_passed": 15,
+            "tests_failed": 0,
+            "warnings": 0,
+            "critical": 0
+          },
+          "failed_tests": [],
+          "critical_issues": [],
+          "recommendations": [
+            "System meets Stage C readiness criteria"
+          ],
+          "timestamp": "2026-03-15T08:30:56.490475+00:00"
+        },
+        "system_score": 97.0,
+        "individual_scores": {
+          "coefficient": 100.0,
+          "integration": 100.0,
+          "logic": 85.0,
+          "stress": 100.0,
+          "chaos": 100.0
+        },
+        "summary": {
+          "tests_run": 15,
+          "tests_passed": 15,
+          "tests_failed": 0,
+          "warnings": 0,
+          "critical": 0
+        }
+      },
+      "timestamp": "2026-03-15T08:30:56.507103+00:00"
+    }
+  ],
+  "backend_url": "https://portfolio-command-7.preview.emergentagent.com",
+  "test_timestamp": "2026-03-15T08:30:56.507147+00:00"
+}
